@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Kana Random Trainer – Mobile (Dakuten + Yōon)</title>
+  <style>
+    :root{
+      --bg:#0f1220; --card:#171a2b; --card-2:#1e2240; --muted:#aab1d1;
+      --text:#ffffff; --accent:#7c9cff; --ring:0 0 0 3px rgba(124,156,255,.35);
+      --radius:16px; --pad:16px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#ffffff; --card:#fff; --card-2:#f7f7fb; --text:#0b1020; --muted:#556; }
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(900px 600px at 15% 10%, #1a1d33 0%, #0f1220 60%) no-repeat, var(--bg);
+      color:var(--text);
+      font:16px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans", "Helvetica Neue", Arial;
+      padding:env(safe-area-inset-top) var(--pad) calc(84px + env(safe-area-inset-bottom)) var(--pad);
+    }
+
+    .app{ max-width:860px; margin:0 auto; display:grid; gap:12px; }
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .title{font-weight:800; font-size:18px}
+    .muted{color:var(--muted)}
+
+    .card{
+      background:linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+    }
+
+    /* Panels */
+    .controls{display:grid; gap:12px}
+    .panel{display:grid; gap:10px}
+
+    /* Segments -> cuộn ngang trên mobile */
+    .seg{
+      display:flex; gap:8px; overflow:auto; padding:6px;
+      background:#11152b; border:1px solid rgba(255,255,255,.08); border-radius:12px;
+      -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
+    }
+    .seg button{
+      flex:0 0 auto; min-width:180px; padding:12px 14px;
+      border:none; border-radius:10px; background:transparent; color:#cfd6ff;
+      font-weight:700; scroll-snap-align:center; cursor:pointer; transition:transform .02s ease;
+    }
+    .seg button.active{background:var(--accent); color:#0e1024; box-shadow:var(--ring)}
+    .seg button:active{transform:translateY(1px)}
+
+    /* Preset: dropdown + cuộn chip */
+    .preset-bar{display:flex; gap:8px; align-items:center; overflow:auto; -webkit-overflow-scrolling:touch}
+    select.preset-select{
+      flex:1 1 220px; padding:12px; border-radius:10px; font-weight:700;
+      background:#0f1433; color:#cbd4ff; border:1px solid rgba(255,255,255,.12); outline:none;
+    }
+
+    /* Checkbox grid -> dùng 2–4 cột tùy chiều ngang */
+    .grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+    @media (min-width:420px){ .grid{ grid-template-columns:repeat(3, minmax(0,1fr)); } }
+    @media (min-width:620px){ .grid{ grid-template-columns:repeat(4, minmax(0,1fr)); } }
+
+    .check{
+      position:relative; display:flex; align-items:center; gap:10px;
+      padding:12px; border-radius:12px; background:#141731; border:1px solid rgba(255,255,255,.08);
+      min-height:44px; cursor:pointer; user-select:none;
+    }
+    .check input{ accent-color:var(--accent); width:18px; height:18px }
+
+    .btn{
+      border:none; background:var(--accent); color:#0e1024; font-weight:900;
+      padding:12px 14px; border-radius:12px; cursor:pointer; min-height:44px;
+    }
+    .btn.secondary{background:#20264a; color:#cdd5ff}
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.16); color:#cfd6ff}
+
+    .pill{ font-size:12px; padding:6px 10px; border-radius:999px; background:#0f1433; border:1px solid rgba(255,255,255,.08); color:#c2c9ff }
+
+    #count{ width:120px; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:#0f1433; color:#cfd6ff; outline:none }
+    #count:focus{ box-shadow:var(--ring) }
+
+    /* Sheet */
+    .sheet{ display:grid; gap:12px; padding:6px }
+    .sheet-head{ display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap }
+    .sheet-title{ font-weight:900; letter-spacing:.02em }
+    .sheet-grid{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px }
+    @media (min-width:420px){ .sheet-grid{ grid-template-columns:repeat(4, minmax(0,1fr)); } }
+    @media (min-width:640px){ .sheet-grid{ grid-template-columns:repeat(5, minmax(0,1fr)); } }
+
+    .cell{
+      background:#11152b; border:1px solid rgba(255,255,255,.08); border-radius:12px;
+      padding:12px 10px; text-align:center; font-weight:800; letter-spacing:.02em;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+    }
+    .idx{ font-size:13px; font-weight:800; opacity:.9 }
+    .big{ font-size:32px; line-height:1 }
+    .small{ font-size:12px; color:#aab1d1 }
+
+    .answers{ display:none; grid-template-columns:repeat(1, minmax(0,1fr)); gap:8px; margin-top:6px }
+    @media (min-width:480px){ .answers{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    @media (min-width:720px){ .answers{ grid-template-columns:repeat(3, minmax(0,1fr)); } }
+    .answers.visible{ display:grid }
+    .ans{ background:#0f1433; border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; font-size:15px; color:#cfd6ff; display:flex; align-items:center; gap:8px }
+
+    .group-note{ font-size:12px; color:#aab1d1 }
+
+    /* Sticky actions (mobile) */
+    .sticky{
+      position:fixed; left:0; right:0; bottom:0; padding:8px var(--pad) calc(8px + env(safe-area-inset-bottom));
+      background:linear-gradient(180deg, rgba(10,12,22,.0) 0%, rgba(10,12,22,.75) 25%, rgba(10,12,22,.98) 100%);
+      backdrop-filter:saturate(140%) blur(8px);
+      display:grid; gap:8px;
+    }
+    .sticky .row{justify-content:space-between}
+    .sticky .btn{flex:1 1 auto}
+
+    .hide{display:none!important}
+
+    @media print{
+      :root{ --text:#000 }
+      body{ background:#fff; color:#000; padding:0 }
+      .card{ background:#fff; border:0; box-shadow:none; padding:0 }
+      .btn, .seg, .check, .pill, .preset-bar, .sticky, #countWrap{ display:none!important }
+      .sheet{ padding:0 }
+      .cell{ background:#fff; border:1px solid #000 }
+      .answers .ans{ background:#fff; border:1px solid #000; color:#000 }
+      a{ color:#000; text-decoration:none }
+      .muted{ color:#000 }
+      .idx{ opacity:1 }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="title">Kana Random Trainer (Mobile – Đề in 1 lần)</div>
+        <div class="muted">Chọn chế độ & hàng → tạo “đề” ngẫu nhiên • Min/Half/Max • đánh số • in nhanh.</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="card panel">
+        <div class="title">Chế độ</div>
+        <div class="seg" id="modeSeg">
+          <button data-mode="hira2roma" class="active">Hiragana → Romaji</button>
+          <button data-mode="roma2hira">Romaji → Hiragana</button>
+          <button data-mode="kata2roma">Katakana → Romaji</button>
+          <button data-mode="roma2kata">Romaji → Katakana</button>
+        </div>
+
+        <div class="row" id="countWrap">
+          <label class="pill">Số lượng:</label>
+          <input id="count" type="number" min="5" step="1" value="10" />
+          <span class="muted" id="countHint">Min 5 • Max ?</span>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <div class="title">Chọn hàng</div>
+        <div class="grid" id="rowGrid"></div>
+
+        <div class="row" style="justify-content:space-between">
+          <div class="preset-bar" style="flex:1 1 auto">
+            <select class="preset-select" id="presetSelect" title="Preset nhanh">
+              <option value="" disabled selected>— Chọn preset —</option>
+              <option value="onlyBasic">Chỉ Cơ bản</option>
+              <option value="onlyDakuten">Chỉ Dakuten</option>
+              <option value="onlyYoon">Chỉ Yōon</option>
+              <option value="basicYoon">Cơ bản + Yōon</option>
+              <option value="basicDakuten">Cơ bản + Dakuten</option>
+              <option value="dakutenYoon">Dakuten + Yōon</option>
+              <option value="all">Tất cả</option>
+              <option value="none">Bỏ hết</option>
+            </select>
+          </div>
+          <div class="row" style="gap:8px">
+            <button class="btn ghost" id="selectAll">Chọn tất cả</button>
+            <button class="btn ghost" id="clearAll">Bỏ chọn</button>
+          </div>
+        </div>
+
+        <div class="muted group-note">
+          Hàng: a, ka, sa, ta, na, ha, ma, ya, ra, wa, n, <b>ga, za, da, ba, pa</b>,
+          <b>kya, gya, sha, ja, cha, nya, hya, bya, pya, mya, rya</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="card sheet" id="sheetCard">
+      <div class="sheet-head">
+        <div class="sheet-title">Đề luyện viết – <span id="sheetMode">Hiragana → Romaji</span></div>
+        <div class="legend muted"><span id="sheetMeta"></span></div>
+      </div>
+      <div class="sheet-grid" id="sheetGrid"></div>
+      <div class="answers" id="answers"></div>
+    </div>
+
+    <div class="card muted" style="font-size:14px">
+      Nguồn dữ liệu: 46 kana cơ bản + dakuten/handakuten + yōon (âm ghép). Một số hàng có &lt; 5 ký tự; giới hạn Max tự điều chỉnh theo kích thước hàng.
+    </div>
+  </div>
+
+  <!-- Sticky actions -->
+  <div class="sticky" role="group" aria-label="Hành động nhanh">
+    <div class="row">
+      <button class="btn secondary" id="regenBtn" title="Tạo lại đề (xáo trộn mới)">Tạo lại đề</button>
+      <button class="btn ghost" id="toggleAns">Hiện đáp án</button>
+      <button class="btn" id="printBtn">In</button>
+    </div>
+  </div>
+
+  <script>
+    // ====== DATA: gojūon + dakuten/handakuten + yōon (giữ nguyên như bản desktop) ======
+    const KANA = [
+      {row:'a', hira:'あ', kata:'ア', roma:'a'},{row:'a', hira:'い', kata:'イ', roma:'i'},{row:'a', hira:'う', kata:'ウ', roma:'u'},{row:'a', hira:'え', kata:'エ', roma:'e'},{row:'a', hira:'お', kata:'オ', roma:'o'},
+      {row:'ka', hira:'か', kata:'カ', roma:'ka'},{row:'ka', hira:'き', kata:'キ', roma:'ki'},{row:'ka', hira:'く', kata:'ク', roma:'ku'},{row:'ka', hira:'け', kata:'ケ', roma:'ke'},{row:'ka', hira:'こ', kata:'コ', roma:'ko'},
+      {row:'sa', hira:'さ', kata:'サ', roma:'sa'},{row:'sa', hira:'し', kata:'シ', roma:'shi'},{row:'sa', hira:'す', kata:'ス', roma:'su'},{row:'sa', hira:'せ', kata:'セ', roma:'se'},{row:'sa', hira:'そ', kata:'ソ', roma:'so'},
+      {row:'ta', hira:'た', kata:'タ', roma:'ta'},{row:'ta', hira:'ち', kata:'チ', roma:'chi'},{row:'ta', hira:'つ', kata:'ツ', roma:'tsu'},{row:'ta', hira:'て', kata:'テ', roma:'te'},{row:'ta', hira:'と', kata:'ト', roma:'to'},
+      {row:'na', hira:'な', kata:'ナ', roma:'na'},{row:'na', hira:'に', kata:'ニ', roma:'ni'},{row:'na', hira:'ぬ', kata:'ヌ', roma:'nu'},{row:'na', hira:'ね', kata:'ネ', roma:'ne'},{row:'na', hira:'の', kata:'ノ', roma:'no'},
+      {row:'ha', hira:'は', kata:'ハ', roma:'ha'},{row:'ha', hira:'ひ', kata:'ヒ', roma:'hi'},{row:'ha', hira:'ふ', kata:'フ', roma:'fu'},{row:'ha', hira:'へ', kata:'ヘ', roma:'he'},{row:'ha', hira:'ほ', kata:'ホ', roma:'ho'},
+      {row:'ma', hira:'ま', kata:'マ', roma:'ma'},{row:'ma', hira:'み', kata:'ミ', roma:'mi'},{row:'ma', hira:'む', kata:'ム', roma:'mu'},{row:'ma', hira:'め', kata:'メ', roma:'me'},{row:'ma', hira:'も', kata:'モ', roma:'mo'},
+      {row:'ya', hira:'や', kata:'ヤ', roma:'ya'},{row:'ya', hira:'ゆ', kata:'ユ', roma:'yu'},{row:'ya', hira:'よ', kata:'ヨ', roma:'yo'},
+      {row:'ra', hira:'ら', kata:'ラ', roma:'ra'},{row:'ra', hira:'り', kata:'リ', roma:'ri'},{row:'ra', hira:'る', kata:'ル', roma:'ru'},{row:'ra', hira:'れ', kata:'レ', roma:'re'},{row:'ra', hira:'ろ', kata:'ロ', roma:'ro'},
+      {row:'wa', hira:'わ', kata:'ワ', roma:'wa'},{row:'wa', hira:'を', kata:'ヲ', roma:'wo'},{row:'n',  hira:'ん', kata:'ン', roma:'n'},
+      {row:'ga', hira:'が', kata:'ガ', roma:'ga'},{row:'ga', hira:'ぎ', kata:'ギ', roma:'gi'},{row:'ga', hira:'ぐ', kata:'グ', roma:'gu'},{row:'ga', hira:'げ', kata:'ゲ', roma:'ge'},{row:'ga', hira:'ご', kata:'ゴ', roma:'go'},
+      {row:'za', hira:'ざ', kata:'ザ', roma:'za'},{row:'za', hira:'じ', kata:'ジ', roma:'ji'},{row:'za', hira:'ず', kata:'ズ', roma:'zu'},{row:'za', hira:'ぜ', kata:'ゼ', roma:'ze'},{row:'za', hira:'ぞ', kata:'ゾ', roma:'zo'},
+      {row:'da', hira:'だ', kata:'ダ', roma:'da'},{row:'da', hira:'ぢ', kata:'ヂ', roma:'ji'},{row:'da', hira:'づ', kata:'ヅ', roma:'zu'},{row:'da', hira:'で', kata:'デ', roma:'de'},{row:'da', hira:'ど', kata:'ド', roma:'do'},
+      {row:'ba', hira:'ば', kata:'バ', roma:'ba'},{row:'ba', hira:'び', kata:'ビ', roma:'bi'},{row:'ba', hira:'ぶ', kata:'ブ', roma:'bu'},{row:'ba', hira:'べ', kata:'ベ', roma:'be'},{row:'ba', hira:'ぼ', kata:'ボ', roma:'bo'},
+      {row:'pa', hira:'ぱ', kata:'パ', roma:'pa'},{row:'pa', hira:'ぴ', kata:'ピ', roma:'pi'},{row:'pa', hira:'ぷ', kata:'プ', roma:'pu'},{row:'pa', hira:'ぺ', kata:'ペ', roma:'pe'},{row:'pa', hira:'ぽ', kata:'ポ', roma:'po'},
+      {row:'kya', hira:'きゃ', kata:'キャ', roma:'kya'},{row:'kya', hira:'きゅ', kata:'キュ', roma:'kyu'},{row:'kya', hira:'きょ', kata:'キョ', roma:'kyo'},
+      {row:'gya', hira:'ぎゃ', kata:'ギャ', roma:'gya'},{row:'gya', hira:'ぎゅ', kata:'ギュ', roma:'gyu'},{row:'gya', hira:'ぎょ', kata:'ギョ', roma:'gyo'},
+      {row:'sha', hira:'しゃ', kata:'シャ', roma:'sha'},{row:'sha', hira:'しゅ', kata:'シュ', roma:'shu'},{row:'sha', hira:'しょ', kata:'ショ', roma:'sho'},
+      {row:'ja',  hira:'じゃ', kata:'ジャ', roma:'ja'},{row:'ja',  hira:'じゅ', kata:'ジュ', roma:'ju'},{row:'ja',  hira:'じょ', kata:'ジョ', roma:'jo'},
+      {row:'cha', hira:'ちゃ', kata:'チャ', roma:'cha'},{row:'cha', hira:'ちゅ', kata:'チュ', roma:'chu'},{row:'cha', hira:'ちょ', kata:'チョ', roma:'cho'},
+      {row:'nya', hira:'にゃ', kata:'ニャ', roma:'nya'},{row:'nya', hira:'にゅ', kata:'ニュ', roma:'nyu'},{row:'nya', hira:'にょ', kata:'ニョ', roma:'nyo'},
+      {row:'hya', hira:'ひゃ', kata:'ヒャ', roma:'hya'},{row:'hya', hira:'ひゅ', kata:'ヒュ', roma:'hyu'},{row:'hya', hira:'ひょ', kata:'ヒョ', roma:'hyo'},
+      {row:'bya', hira:'びゃ', kata:'ビャ', roma:'bya'},{row:'bya', hira:'びゅ', kata:'ビュ', roma:'byu'},{row:'bya', hira:'びょ', kata:'ビョ', roma:'byo'},
+      {row:'pya', hira:'ぴゃ', kata:'ピャ', roma:'pya'},{row:'pya', hira:'ぴゅ', kata:'ピュ', roma:'pyu'},{row:'pya', hira:'ぴょ', kata:'ピョ', roma:'pyo'},
+      {row:'mya', hira:'みゃ', kata:'ミャ', roma:'mya'},{row:'mya', hira:'みゅ', kata:'ミュ', roma:'myu'},{row:'mya', hira:'みょ', kata:'ミョ', roma:'myo'},
+      {row:'rya', hira:'りゃ', kata:'リャ', roma:'rya'},{row:'rya', hira:'りゅ', kata:'リュ', roma:'ryu'},{row:'rya', hira:'りょ', kata:'リョ', roma:'ryo'},
+    ];
+
+    const ROWS = ['a','ka','sa','ta','na','ha','ma','ya','ra','wa','n', 'ga','za','da','ba','pa', 'kya','gya','sha','ja','cha','nya','hya','bya','pya','mya','rya'];
+    const ROW_LABELS = Object.fromEntries(ROWS.map(r=>[r,r]));
+    const GROUPS = {
+      basic:['a','ka','sa','ta','na','ha','ma','ya','ra','wa','n'],
+      dakuten:['ga','za','da','ba','pa'],
+      yoon:['kya','gya','sha','ja','cha','nya','hya','bya','pya','mya','rya'],
+    };
+    const PRESETS = {
+      onlyBasic:[...GROUPS.basic],
+      onlyDakuten:[...GROUPS.dakuten],
+      onlyYoon:[...GROUPS.yoon],
+      basicYoon:[...GROUPS.basic, ...GROUPS.yoon],
+      basicDakuten:[...GROUPS.basic, ...GROUPS.dakuten],
+      dakutenYoon:[...GROUPS.dakuten, ...GROUPS.yoon],
+      all:[...ROWS],
+      none:[]
+    };
+
+    // ====== STATE ======
+    let state = {
+      mode: load('mode','hira2roma'),
+      rows: new Set(load('rows',['a','ka','sa','ta','na','ha','ma'])),
+      count: load('count', 10),
+    };
+
+    // ====== UTIL ======
+    function save(k,v){ localStorage.setItem('kana_'+k, JSON.stringify(v)); }
+    function load(k,f){ try{const v=localStorage.getItem('kana_'+k); return v?JSON.parse(v):f;}catch{return f;} }
+    const byRows = rows => KANA.filter(k => rows.has(k.row));
+
+    function buildPoolForMode(){
+      return byRows(state.rows).map(x=>{
+        if(state.mode==='hira2roma') return {q:x.hira, a:x.roma, kana:x, type:'hira'};
+        if(state.mode==='roma2hira') return {q:x.roma, a:x.hira, kana:x, type:'hira'};
+        if(state.mode==='kata2roma') return {q:x.kata, a:x.roma, kana:x, type:'kata'};
+        if(state.mode==='roma2kata') return {q:x.roma, a:x.kata, kana:x, type:'kata'};
+      });
+    }
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+
+    function perRowSizeCap(row){
+      const size = KANA.filter(k=>k.row===row).length;
+      return Math.min(5, size||0);
+    }
+
+    // ====== UI RENDER ======
+    const rowGrid = document.getElementById('rowGrid');
+    ROWS.forEach(r=>{
+      const label=document.createElement('label');
+      label.className='check';
+      label.innerHTML=`<input type="checkbox" ${state.rows.has(r)?'checked':''} data-row="${r}"><span>${ROW_LABELS[r]}</span>`;
+      rowGrid.appendChild(label);
+    });
+
+    const countInput=document.getElementById('count');
+    const countHint=document.getElementById('countHint');
+
+    document.getElementById('selectAll').onclick=()=>{
+      state.rows=new Set(ROWS);
+      [...rowGrid.querySelectorAll('input')].forEach(i=>i.checked=true);
+      normalizeCountAndRender(); persist();
+    };
+    document.getElementById('clearAll').onclick=()=>{
+      state.rows=new Set();
+      [...rowGrid.querySelectorAll('input')].forEach(i=>i.checked=false);
+      normalizeCountAndRender(); persist();
+    };
+
+    // Preset (dropdown)
+    const presetSelect=document.getElementById('presetSelect');
+    presetSelect.addEventListener('change',()=>{
+      applyPreset(presetSelect.value);
+      presetSelect.value=""; // reset placeholder
+    });
+    function applyPreset(key){
+      const list=PRESETS[key]||[];
+      state.rows=new Set(list);
+      ROWS.forEach(r=>{
+        const box=rowGrid.querySelector(`input[data-row="${r}"]`);
+        if(box) box.checked=state.rows.has(r);
+      });
+      normalizeCountAndRender(); persist();
+    }
+
+    rowGrid.addEventListener('change', e=>{
+      if(e.target && e.target.matches('input[type="checkbox"]')){
+        const r=e.target.getAttribute('data-row');
+        if(e.target.checked) state.rows.add(r); else state.rows.delete(r);
+        normalizeCountAndRender(); persist();
+      }
+    });
+
+    const modeSeg=document.getElementById('modeSeg');
+    [...modeSeg.children].forEach(btn=>{
+      btn.onclick=()=>{
+        [...modeSeg.children].forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        state.mode=btn.dataset.mode;
+        normalizeCountAndRender(); persist();
+      }
+    });
+    // restore active
+    [...modeSeg.children].forEach(b=>{ if(b.dataset.mode===state.mode) b.classList.add('active'); });
+
+    const sheetModeEl=document.getElementById('sheetMode');
+    const sheetMetaEl=document.getElementById('sheetMeta');
+    const sheetGridEl=document.getElementById('sheetGrid');
+    const answersEl=document.getElementById('answers');
+
+    function modeLabel(m){
+      switch(m){
+        case 'hira2roma': return 'Hiragana → Romaji';
+        case 'roma2hira': return 'Romaji → Hiragana';
+        case 'kata2roma': return 'Katakana → Romaji';
+        case 'roma2kata': return 'Romaji → Katakana';
+        default: return m;
+      }
+    }
+
+    function getCountBounds(){
+      const selected=[...state.rows];
+      const total=buildPoolForMode().length;
+      const theoreticalMax=selected.reduce((s,row)=>s+perRowSizeCap(row),0);
+      const max=Math.min(theoreticalMax,total);
+      const min=Math.min(5,total);
+      return {min,max,total};
+    }
+
+    function setCount(v){
+      state.count=v; countInput.value=v; persist(); renderSheet();
+    }
+
+    function normalizeCountAndRender(){
+      const {min,max,total}=getCountBounds();
+      const perRowCap=[...state.rows].map(r=>`${r}:${perRowSizeCap(r)}`).join(', ');
+      countHint.textContent = total ? `Min ${min} • Half ~ ${Math.round(max/2)} • Max ${max} • Tổng: ${total} • Cap: [${perRowCap||'-'}]` : 'Chưa chọn hàng nào';
+      if(total===0){ state.count=0; countInput.value=0; }
+      else{
+        state.count=clamp(parseInt(countInput.value || state.count || min,10), min, max);
+        countInput.min=String(min); countInput.max=String(max); countInput.value=state.count;
+      }
+      renderSheet();
+    }
+
+    function renderSheet(){
+      const poolAll=shuffle(buildPoolForMode());
+      sheetGridEl.innerHTML=''; answersEl.innerHTML=''; answersEl.classList.remove('visible');
+      const selected=[...state.rows];
+      sheetModeEl.textContent=modeLabel(state.mode);
+      if(poolAll.length===0){
+        sheetMetaEl.textContent='Chưa chọn hàng nào';
+        sheetGridEl.innerHTML=`<div class="muted">Hãy chọn ít nhất 1 hàng để tạo đề.</div>`;
+        return;
+      }
+      const takeN=clamp(state.count,1,poolAll.length);
+      const pool=poolAll.slice(0,takeN);
+      sheetMetaEl.textContent=`Hàng: ${selected.join(', ')} • Số mục: ${pool.length}`;
+
+      pool.forEach((item,i)=>{
+        const n=i+1;
+        const cell=document.createElement('div');
+        cell.className='cell';
+        cell.innerHTML=`<div class="idx">${n}.</div><div class="big">${item.q}</div><div class="small">___</div>`;
+        sheetGridEl.appendChild(cell);
+      });
+
+      pool.forEach((item,i)=>{
+        const n=i+1;
+        const ans=document.createElement('div');
+        ans.className='ans';
+        const pair=item.type==='hira' ? `(${item.kana.kata})` : `(${item.kana.hira})`;
+        ans.innerHTML=`<span class="idx">${n}.</span> ${item.q} → ${item.a} ${pair}`;
+        answersEl.appendChild(ans);
+      });
+    }
+
+    function persist(){ save('mode',state.mode); save('rows',[...state.rows]); save('count',state.count); }
+
+    // Sticky actions
+    document.getElementById('regenBtn').onclick=renderSheet;
+    document.getElementById('toggleAns').onclick=()=>{
+      answersEl.classList.toggle('visible');
+      document.getElementById('toggleAns').textContent = answersEl.classList.contains('visible') ? 'Ẩn đáp án' : 'Hiện đáp án';
+    };
+    document.getElementById('printBtn').onclick=()=>window.print();
+
+    countInput.addEventListener('input', ()=>{
+      const {min,max}=getCountBounds();
+      let v=parseInt(countInput.value||'0',10);
+      if(Number.isNaN(v)) v=min;
+      v=clamp(v,min,max); state.count=v; countInput.value=v; persist(); renderSheet();
+    });
+
+    // Init
+    normalizeCountAndRender();
+  </script>
+</body>
+</html>
