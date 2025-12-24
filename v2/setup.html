@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kana Train - Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f14;
+            color: #e5e7eb;
+        }
+
+        .kana-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .bg-dark-card {
+            background-color: #111826;
+        }
+
+        .selected-tile {
+            border-color: #22c55e !important;
+            background-color: rgba(34, 197, 94, 0.1);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+    <nav class="p-6 flex justify-between items-center max-w-4xl mx-auto w-full">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#22c55e] rounded-lg flex items-center justify-center text-black font-bold">K</div>
+            <span class="font-bold text-xl tracking-tight">Kana Train</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-gray-500 text-sm">Welcome back,</span>
+            <span class="text-[#22c55e] font-semibold" id="display-name">User</span>
+        </div>
+    </nav>
+
+    <main class="flex-1 max-w-2xl mx-auto w-full p-4 pb-32">
+        <header class="mb-10">
+            <h2 class="text-4xl font-bold mb-2">Practice Setup</h2>
+            <p class="text-gray-500">Choose the characters you want to master today.</p>
+        </header>
+
+        <div class="mb-8 space-y-3">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Practice Mode</p>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="mode-k2r" onclick="setMode('k2r')"
+                    class="bg-[#22c55e] text-black p-4 rounded-2xl font-bold text-sm border-2 border-[#22c55e] transition-all relative overflow-hidden group">
+                    <span class="relative z-10 transition-all group-hover:scale-105 inline-block">Kana → Romaji</span>
+                    <span
+                        class="block text-[10px] opacity-70 font-medium mt-1 relative z-10 bg-black/10 px-2 py-0.5 rounded-full w-fit mx-auto">Read
+                        Kana, pick Romaji</span>
+                </button>
+                <button id="mode-r2k" onclick="setMode('r2k')"
+                    class="bg-dark-card text-gray-400 p-4 rounded-2xl font-bold text-sm border-2 border-gray-800 transition-all hover:bg-gray-800/50 relative overflow-hidden group">
+                    <span class="relative z-10 transition-all group-hover:scale-105 inline-block">Romaji → Kana</span>
+                    <span
+                        class="block text-[10px] opacity-60 font-medium mt-1 relative z-10 bg-black/20 px-2 py-0.5 rounded-full w-fit mx-auto">Read
+                        Romaji, pick Kana</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-end mb-6">
+            <div class="space-y-3">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Character Set</p>
+                <div class="flex bg-dark-card p-1 rounded-xl border border-gray-800">
+                    <button
+                        class="px-6 py-2.5 rounded-lg bg-[#22c55e] text-black font-bold text-sm transition-all">Hiragana</button>
+                    <button
+                        class="px-6 py-2.5 rounded-lg text-gray-400 font-semibold text-sm hover:text-white transition-all">Katakana</button>
+                </div>
+            </div>
+
+            <button onclick="selectAll()"
+                class="bg-dark-card border border-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 hover:border-gray-500 transition-all active:scale-95">
+                ✓ Select All
+            </button>
+        </div>
+
+        <div id="kana-grid-container" class="kana-grid">
+        </div>
+    </main>
+
+    <div class="fixed bottom-0 left-0 w-full p-6 bg-[#0b0f14]/90 backdrop-blur-xl border-t border-gray-800/50">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <div class="flex flex-col">
+                <span class="text-gray-500 text-xs uppercase font-bold tracking-wider">Selection</span>
+                <span id="selected-count" class="font-black text-xl text-[#22c55e]">0 characters</span>
+            </div>
+            <button onclick="goToQuiz()" id="btn-start"
+                class="bg-[#22c55e] text-black font-black px-10 py-4 rounded-2xl hover:scale-105 transition-all shadow-[0_0_20px_rgba(34,197,94,0.2)] active:scale-95">
+                START TRAINING →
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const HIRAGANA = [
+            { k: 'あ', r: 'a' }, { k: 'い', r: 'i' }, { k: 'う', r: 'u' }, { k: 'え', r: 'e' }, { k: 'お', r: 'o' },
+            { k: 'か', r: 'ka' }, { k: 'き', r: 'ki' }, { k: 'く', r: 'ku' }, { k: 'け', r: 'ke' }, { k: 'こ', r: 'ko' },
+            { k: 'さ', r: 'sa' }, { k: 'し', r: 'shi' }, { k: 'す', r: 'su' }, { k: 'せ', r: 'se' }, { k: 'そ', r: 'so' }
+        ];
+        let selected = new Set();
+        let currentMode = 'k2r'; // Default mode
+
+        window.onload = () => {
+            document.getElementById('display-name').innerText = localStorage.getItem('kana-user') || 'Guest';
+            renderGrid();
+        };
+
+        function setMode(mode) {
+            currentMode = mode;
+            const k2rBtn = document.getElementById('mode-k2r');
+            const r2kBtn = document.getElementById('mode-r2k');
+
+            // Reset classes
+            const activeClass = "bg-[#22c55e] text-black border-[#22c55e]";
+            const inactiveClass = "bg-dark-card text-gray-400 border-gray-800";
+
+            if (mode === 'k2r') {
+                k2rBtn.className = `p-4 rounded-2xl font-bold text-sm border-2 transition-all relative overflow-hidden group ${activeClass}`;
+                r2kBtn.className = `p-4 rounded-2xl font-bold text-sm border-2 transition-all hover:bg-gray-800/50 relative overflow-hidden group ${inactiveClass}`;
+            } else {
+                r2kBtn.className = `p-4 rounded-2xl font-bold text-sm border-2 transition-all relative overflow-hidden group ${activeClass}`;
+                k2rBtn.className = `p-4 rounded-2xl font-bold text-sm border-2 transition-all hover:bg-gray-800/50 relative overflow-hidden group ${inactiveClass}`;
+            }
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('kana-grid-container');
+            container.innerHTML = ''; // Clear old
+            HIRAGANA.forEach(item => {
+                const div = document.createElement('div');
+                div.id = `char-${item.k}`;
+                div.className = "bg-dark-card border-2 border-gray-800 rounded-2xl p-5 flex flex-col items-center cursor-pointer transition-all hover:border-gray-600 active:scale-90";
+
+                // Keep selected state
+                if (selected.has(item.k)) div.classList.add('selected-tile');
+
+                div.innerHTML = `
+                    <span class="text-3xl font-bold mb-1">${item.k}</span>
+                    <span class="text-[10px] text-gray-500 font-black uppercase tracking-widest">${item.r}</span>
+                `;
+
+                div.onclick = () => toggleSelect(item.k, div);
+                container.appendChild(div);
+            });
+        }
+
+        function toggleSelect(kana, element) {
+            if (selected.has(kana)) {
+                selected.delete(kana);
+                element.classList.remove('selected-tile');
+            } else {
+                selected.add(kana);
+                element.classList.add('selected-tile');
+            }
+            updateCounter();
+        }
+
+        function selectAll() {
+            HIRAGANA.forEach(item => {
+                selected.add(item.k);
+            });
+            renderGrid(); // Redraw UI
+            updateCounter();
+        }
+
+        function updateCounter() {
+            document.getElementById('selected-count').innerText = `${selected.size} characters`;
+        }
+
+        function goToQuiz() {
+            if (selected.size === 0) return alert("Please select at least one character to practice!");
+            localStorage.setItem('selected-kana', JSON.stringify(Array.from(selected)));
+            localStorage.setItem('practice-mode', currentMode);
+            window.location.href = 'quiz.html';
+        }
+    </script>
+</body>
+
+</html>

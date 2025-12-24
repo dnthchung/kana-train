@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kana Train - Mastery Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f14; color: #e5e7eb; }
+        .kana-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .accent-green { color: #22c55e; }
+        .bg-accent { background-color: #22c55e; }
+        .bg-dark-card { background-color: #111826; }
+        .hide { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <nav id="navbar" class="p-4 flex justify-between items-center max-w-4xl mx-auto w-full hide">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-accent rounded-lg flex items-center justify-center text-black font-bold">K</div>
+            <span class="font-bold text-xl">Kana Train</span>
+        </div>
+        <div class="flex gap-6 text-sm font-medium text-gray-400">
+            <button onclick="showScreen('setup')" class="hover:text-white">Practice</button>
+            <button class="hover:text-white">Stats</button>
+            <span id="display-user-name" class="text-accent-green"></span>
+        </div>
+    </nav>
+
+    <section id="screen-onboarding" class="flex-1 flex flex-col items-center justify-center p-6">
+        <div class="max-w-md w-full text-center space-y-6">
+            <h1 class="text-4xl font-bold">Welcome to <span class="accent-green">Kana Train</span></h1>
+            <p class="text-gray-400">Master Hiragana & Katakana with data-driven practice.</p>
+            <input type="text" id="input-name" placeholder="Enter your name..." 
+                class="w-full bg-dark-card border border-gray-700 p-4 rounded-xl focus:outline-none focus:border-green-500 text-center text-xl">
+            <button onclick="saveUserAndStart()" class="w-full bg-accent text-black font-bold p-4 rounded-xl hover:opacity-90 transition">
+                Get Started
+            </button>
+        </div>
+    </section>
+
+    <section id="screen-setup" class="flex-1 max-w-2xl mx-auto w-full p-4 hide">
+        <header class="mb-8">
+            <h2 class="text-3xl font-bold">Practice Setup</h2>
+            <p class="text-gray-500">Customize your training session</p>
+        </header>
+
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="bg-dark-card p-4 rounded-xl border border-gray-800">
+                <p class="text-xs text-gray-500 uppercase">Total Mastery</p>
+                <p class="text-2xl font-bold accent-green" id="stat-mastery-percent">0%</p>
+            </div>
+            <div class="bg-dark-card p-4 rounded-xl border border-gray-800">
+                <p class="text-xs text-gray-500 uppercase">Strongest</p>
+                <p class="text-sm font-semibold truncate" id="stat-strongest">-</p>
+            </div>
+            <div class="bg-dark-card p-4 rounded-xl border border-gray-800">
+                <p class="text-xs text-gray-500 uppercase">Weakest</p>
+                <p class="text-sm font-semibold truncate accent-green" id="stat-weakest">-</p>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex bg-dark-card p-1 rounded-lg">
+                <button onclick="toggleSet('hira')" id="btn-hira" class="px-4 py-2 rounded-md bg-accent text-black font-semibold text-sm">Hiragana</button>
+                <button onclick="toggleSet('kata')" id="btn-kata" class="px-4 py-2 rounded-md text-gray-400 font-semibold text-sm">Katakana</button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="selectAll()" class="text-xs border border-gray-700 px-3 py-1 rounded hover:bg-gray-800">Select All</button>
+                <button onclick="selectWeakest()" class="text-xs border border-green-900 text-green-500 px-3 py-1 rounded hover:bg-green-950">▲ Weakest</button>
+            </div>
+        </div>
+
+        <div id="kana-grid-container" class="kana-grid mb-24">
+            </div>
+
+        <div class="fixed bottom-0 left-0 w-full p-6 bg-[#0b0f14]/80 backdrop-blur-md">
+            <div class="max-w-2xl mx-auto flex justify-between items-center">
+                <div class="text-sm">
+                    <span class="text-gray-500">Selected:</span>
+                    <span id="selected-count" class="font-bold accent-green">0 characters</span>
+                </div>
+                <button onclick="startTraining()" id="btn-start" disabled class="bg-accent text-black font-bold px-8 py-3 rounded-full opacity-50 cursor-not-allowed">
+                    Start Training →
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-quiz" class="flex-1 flex flex-col hide">
+        <div class="w-full h-1 bg-gray-800">
+            <div id="quiz-progress-bar" class="h-full bg-accent transition-all duration-300" style="width: 0%"></div>
+        </div>
+        
+        <div class="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <button onclick="showScreen('setup')" class="absolute top-6 left-6 text-gray-500 hover:text-white">✕</button>
+            <div class="absolute top-6 right-6 flex gap-4 text-xs font-mono">
+                <span class="text-green-500">Correct: <span id="quiz-correct-count">0</span></span>
+                <span class="text-red-500">Wrong: <span id="quiz-wrong-count">0</span></span>
+            </div>
+
+            <div class="text-center mb-12">
+                <h1 id="quiz-prompt" class="text-9xl font-bold mb-4">yu</h1>
+                <button class="flex items-center gap-2 mx-auto text-gray-400 bg-gray-800/50 px-4 py-2 rounded-full text-sm">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c-.5.13-1 .56-1 1.09v13.7c0 .53.5.96 1 1.09.4.1.72 0 1-.27l5.3-5.3h2.3c.55 0 1-.45 1-1v-4c0-.55-.45-1-1-1h-2.3l-5.3-5.3c-.28-.27-.6-.37-1-.27zM5 9c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1s1-.45 1-1v-4c0-.55-.45-1-1-1zm3-2c-.55 0-1 .45-1 1v8c0 .55.45 1 1 1s1-.45 1-1V8c0-.55-.45-1-1-1z"/></svg>
+                    Replay Audio
+                </button>
+            </div>
+
+            <div id="quiz-options" class="grid grid-cols-2 gap-4 max-w-sm w-full">
+                </div>
+            <p class="mt-8 text-gray-600 text-sm">Select the corresponding Kana character</p>
+        </div>
+    </section>
+
+    <section id="screen-result" class="flex-1 max-w-2xl mx-auto w-full p-6 hide flex flex-col">
+        <div class="text-center my-8">
+            <h2 class="text-4xl font-bold mb-2">Session Complete!</h2>
+            <p class="text-gray-400">Great job finishing your practice.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-dark-card p-6 rounded-2xl border border-gray-800 text-center">
+                <p class="text-xs text-gray-500 uppercase mb-1">Score</p>
+                <p class="text-4xl font-bold"><span id="result-score">0</span><span class="text-gray-600 text-2xl">/20</span></p>
+            </div>
+            <div class="bg-dark-card p-6 rounded-2xl border border-gray-800 text-center">
+                <p class="text-xs text-gray-500 uppercase mb-1">Accuracy</p>
+                <p class="text-4xl font-bold accent-green" id="result-accuracy">0%</p>
+            </div>
+        </div>
+
+        <div class="space-y-6 flex-1">
+            <div id="section-needs-review" class="hide">
+                <h3 class="text-orange-500 text-sm font-bold flex items-center gap-2 mb-3">
+                    ⚠ Needs Review
+                </h3>
+                <div id="list-wrong" class="flex flex-wrap gap-2 bg-orange-950/20 p-4 rounded-xl border border-orange-900/30 text-orange-200">
+                    </div>
+            </div>
+
+            <div>
+                <h3 class="text-green-500 text-sm font-bold flex items-center gap-2 mb-3">
+                    ✓ Perfect
+                </h3>
+                <div id="list-perfect" class="flex flex-wrap gap-2">
+                    </div>
+            </div>
+        </div>
+
+        <div class="mt-8 flex gap-4">
+            <button onclick="showScreen('setup')" class="flex-1 bg-dark-card border border-gray-700 p-4 rounded-xl font-bold hover:bg-gray-800">
+                Back to Setup
+            </button>
+            <button onclick="startTraining()" class="flex-1 bg-accent text-black p-4 rounded-xl font-bold hover:opacity-90">
+                Play Again
+            </button>
+        </div>
+    </section>
+
+    <script>
+        // DATA
+        const HIRAGANA = [
+            {k: 'あ', r: 'a'}, {k: 'い', r: 'i'}, {k: 'う', r: 'u'}, {k: 'え', r: 'e'}, {k: 'お', r: 'o'},
+            {k: 'か', r: 'ka'}, {k: 'き', r: 'ki'}, {k: 'く', r: 'ku'}, {k: 'け', r: 'ke'}, {k: 'こ', r: 'ko'},
+            {k: 'さ', r: 'sa'}, {k: 'し', r: 'shi'}, {k: 'す', r: 'su'}, {k: 'せ', r: 'se'}, {k: 'そ', r: 'so'},
+            {k: 'た', r: 'ta'}, {k: 'ち', r: 'chi'}, {k: 'つ', r: 'tsu'}, {k: 'て', r: 'te'}, {k: 'と', r: 'to'},
+            {k: 'な', r: 'na'}, {k: 'に', r: 'ni'}, {k: 'ぬ', r: 'nu'}, {k: 'ね', r: 'ne'}, {k: 'の', r: 'no'},
+            {k: 'は', r: 'ha'}, {k: 'ひ', r: 'hi'}, {k: 'ふ', r: 'fu'}, {k: 'へ', r: 'he'}, {k: 'ほ', r: 'ho'},
+            {k: 'ま', r: 'ma'}, {k: 'み', r: 'mi'}, {k: 'む', r: 'mu'}, {k: 'め', r: 'me'}, {k: 'も', r: 'mo'},
+            {k: 'や', r: 'ya'}, {k: '', r: ''}, {k: 'ゆ', r: 'yu'}, {k: '', r: ''}, {k: 'よ', r: 'yo'},
+            {k: 'ら', r: 'ra'}, {k: 'り', r: 'ri'}, {k: 'る', r: 'ru'}, {k: 'れ', r: 're'}, {k: 'ろ', r: 'ro'},
+            {k: 'わ', r: 'wa'}, {k: '', r: ''}, {k: '', r: ''}, {k: '', r: ''}, {k: 'を', r: 'wo'},
+            {k: 'ん', r: 'n'}
+        ];
+        const KATAKANA = [
+            {k: 'ア', r: 'a'}, {k: 'イ', r: 'i'}, {k: 'ウ', r: 'u'}, {k: 'エ', r: 'e'}, {k: 'オ', r: 'o'},
+            {k: 'カ', r: 'ka'}, {k: 'キ', r: 'ki'}, {k: 'ク', r: 'ku'}, {k: 'ケ', r: 'ke'}, {k: 'コ', r: 'ko'}
+            // ... có thể thêm đầy đủ tương tự Hiragana
+        ];
+
+        // STATE
+        let currentUser = null;
+        let stats = JSON.parse(localStorage.getItem('kana-stats')) || {};
+        let currentMode = 'hira';
+        let selectedSet = new Set();
+        let quizQueue = [];
+        let quizIndex = 0;
+        let correctThisSession = 0;
+        let wrongThisSession = [];
+        let correctListSession = [];
+
+        // INITIALIZATION
+        window.onload = () => {
+            const savedUser = localStorage.getItem('kana-user');
+            if (savedUser) {
+                currentUser = savedUser;
+                document.getElementById('display-user-name').innerText = currentUser;
+                showScreen('setup');
+                renderGrid();
+                updateStatsOverview();
+            }
+        };
+
+        // NAVIGATION
+        function showScreen(screenId) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hide'));
+            document.getElementById(`screen-${screenId}`).classList.remove('hide');
+            if (screenId !== 'onboarding') document.getElementById('navbar').classList.remove('hide');
+        }
+
+        // ONBOARDING
+        function saveUserAndStart() {
+            const name = document.getElementById('input-name').value;
+            if (!name) return alert("Please enter your name");
+            localStorage.setItem('kana-user', name);
+            currentUser = name;
+            document.getElementById('display-user-name').innerText = name;
+            showScreen('setup');
+            renderGrid();
+            updateStatsOverview();
+        }
+
+        // SETUP LOGIC
+        function toggleSet(mode) {
+            currentMode = mode;
+            document.getElementById('btn-hira').className = mode === 'hira' ? 'px-4 py-2 rounded-md bg-accent text-black font-semibold text-sm' : 'px-4 py-2 rounded-md text-gray-400 font-semibold text-sm';
+            document.getElementById('btn-kata').className = mode === 'kata' ? 'px-4 py-2 rounded-md bg-accent text-black font-semibold text-sm' : 'px-4 py-2 rounded-md text-gray-400 font-semibold text-sm';
+            selectedSet.clear();
+            renderGrid();
+            updateSelectionUI();
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('kana-grid-container');
+            container.innerHTML = '';
+            const data = currentMode === 'hira' ? HIRAGANA : KATAKANA;
+
+            data.forEach((item, idx) => {
+                const tile = document.createElement('div');
+                if (!item.k) {
+                    tile.className = "h-16 opacity-0";
+                } else {
+                    const charStats = stats[item.k] || {c: 0, w: 0};
+                    const isMastered = charStats.c > 5;
+                    
+                    tile.className = `bg-dark-card border-2 border-gray-800 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer transition relative hover:border-gray-600`;
+                    tile.innerHTML = `
+                        <span class="text-xl font-bold">${item.k}</span>
+                        <span class="text-[10px] text-gray-500 uppercase">${item.r}</span>
+                        ${isMastered ? '<div class="absolute top-1 right-1 w-1 h-1 bg-green-500 rounded-full"></div>' : ''}
+                    `;
+                    tile.onclick = () => {
+                        if (selectedSet.has(item.k)) selectedSet.delete(item.k);
+                        else selectedSet.add(item.k);
+                        tile.classList.toggle('border-accent');
+                        tile.classList.toggle('border-gray-800');
+                        updateSelectionUI();
+                    };
+                }
+                container.appendChild(tile);
+            });
+        }
+
+        function updateSelectionUI() {
+            const count = selectedSet.size;
+            document.getElementById('selected-count').innerText = `${count} characters`;
+            const btn = document.getElementById('btn-start');
+            btn.disabled = count === 0;
+            btn.classList.toggle('opacity-50', count === 0);
+            btn.classList.toggle('cursor-not-allowed', count === 0);
+        }
+
+        function selectAll() {
+            const data = currentMode === 'hira' ? HIRAGANA : KATAKANA;
+            data.forEach(i => { if(i.k) selectedSet.add(i.k) });
+            renderGrid();
+            // Highlight selected
+            document.querySelectorAll('#kana-grid-container > div').forEach(el => {
+                if(el.innerText) el.classList.add('border-accent');
+            });
+            updateSelectionUI();
+        }
+
+        // QUIZ LOGIC
+        function startTraining() {
+            const fullData = [...HIRAGANA, ...KATAKANA].filter(i => i.k && selectedSet.has(i.k));
+            quizQueue = fullData.sort(() => Math.random() - 0.5);
+            quizIndex = 0;
+            correctThisSession = 0;
+            wrongThisSession = [];
+            correctListSession = [];
+            showScreen('quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (quizIndex >= quizQueue.length) {
+                showResults();
+                return;
+            }
+
+            const current = quizQueue[quizIndex];
+            document.getElementById('quiz-prompt').innerText = current.r;
+            document.getElementById('quiz-progress-bar').style.width = `${(quizIndex / quizQueue.length) * 100}%`;
+            document.getElementById('quiz-correct-count').innerText = correctThisSession;
+            document.getElementById('quiz-wrong-count').innerText = wrongThisSession.length;
+
+            // Generate options
+            let options = [current.k];
+            const allPossible = currentMode === 'hira' ? HIRAGANA : KATAKANA;
+            while(options.length < 4) {
+                let random = allPossible[Math.floor(Math.random() * allPossible.length)].k;
+                if(random && !options.includes(random)) options.push(random);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-dark-card border border-gray-800 p-8 rounded-2xl text-3xl font-bold hover:border-accent transition";
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(opt, current.k, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selected, correct, btn) {
+            const allBtns = document.querySelectorAll('#quiz-options button');
+            allBtns.forEach(b => b.onclick = null); // Prevent double click
+
+            if (selected === correct) {
+                btn.classList.add('bg-green-900/30', 'border-green-500', 'text-green-500');
+                correctThisSession++;
+                correctListSession.push(correct);
+                updateStorage(correct, true);
+            } else {
+                btn.classList.add('bg-red-900/30', 'border-red-500', 'text-red-500');
+                wrongThisSession.push(correct);
+                updateStorage(correct, false);
+                // Show the right one
+                allBtns.forEach(b => {
+                    if(b.innerText === correct) b.classList.add('border-green-500', 'text-green-500');
+                });
+            }
+
+            setTimeout(() => {
+                quizIndex++;
+                loadQuestion();
+            }, 1000);
+        }
+
+        function updateStorage(kana, isCorrect) {
+            if(!stats[kana]) stats[kana] = {c: 0, w: 0};
+            if(isCorrect) stats[kana].c++;
+            else stats[kana].w++;
+            localStorage.setItem('kana-stats', JSON.stringify(stats));
+        }
+
+        // RESULTS
+        function showResults() {
+            showScreen('result');
+            document.getElementById('result-score').innerText = correctThisSession;
+            const accuracy = Math.round((correctThisSession / quizQueue.length) * 100);
+            document.getElementById('result-accuracy').innerText = `${accuracy}%`;
+
+            const listWrong = document.getElementById('list-wrong');
+            const listPerfect = document.getElementById('list-perfect');
+            const sectionWrong = document.getElementById('section-needs-review');
+
+            listWrong.innerHTML = '';
+            listPerfect.innerHTML = '';
+
+            if(wrongThisSession.length > 0) {
+                sectionWrong.classList.remove('hide');
+                [...new Set(wrongThisSession)].forEach(k => {
+                    listWrong.innerHTML += `<span class="bg-orange-900/40 px-3 py-1 rounded-lg">${k}</span>`;
+                });
+            } else {
+                sectionWrong.classList.add('hide');
+            }
+
+            correctListSession.forEach(k => {
+                listPerfect.innerHTML += `<span class="bg-gray-800 px-3 py-1 rounded-lg">${k}</span>`;
+            });
+            
+            updateStatsOverview();
+        }
+
+        function updateStatsOverview() {
+            const keys = Object.keys(stats);
+            if(keys.length === 0) return;
+
+            let totalCorrect = 0;
+            let totalTries = 0;
+            let strongest = {k: '-', val: -1};
+            let weakest = {k: '-', val: 999};
+
+            keys.forEach(k => {
+                const s = stats[k];
+                totalCorrect += s.c;
+                totalTries += (s.c + s.w);
+                if(s.c > strongest.val) strongest = {k: k, val: s.c};
+                if(s.w > 0 && s.w > weakest.val) weakest = {k: k, val: s.w};
+            });
+
+            document.getElementById('stat-mastery-percent').innerText = `${Math.min(100, Math.round((totalCorrect/230)*100))}%`; // Giả định mastery là 230 lần đúng
+            document.getElementById('stat-strongest').innerText = strongest.k;
+            document.getElementById('stat-weakest').innerText = weakest.k === '-' ? 'None' : weakest.k;
+        }
+
+    </script>
+</body>
+</html>

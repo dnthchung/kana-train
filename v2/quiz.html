@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kana Train - Fixed Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f14;
+            color: #e5e7eb;
+        }
+
+        .bg-dark-card {
+            background-color: #111826;
+        }
+
+        /* Animation mượt cho Modal */
+        .modal-scale {
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.3s ease-out;
+        }
+
+        .modal-show {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-6px);
+            }
+
+            75% {
+                transform: translateX(6px);
+            }
+        }
+
+        .animate-shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+        }
+
+        @keyframes success-pop {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .animate-success {
+            animation: success-pop 0.3s ease-out;
+        }
+
+        .streak-fire {
+            animation: pulse-fire 1s infinite alternate;
+        }
+
+        @keyframes pulse-fire {
+            from {
+                text-shadow: 0 0 10px #f59e0b;
+                transform: scale(1);
+            }
+
+            to {
+                text-shadow: 0 0 20px #f59e0b, 0 0 30px #d97706;
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col relative overflow-hidden">
+
+    <nav class="p-4 border-b border-gray-800 flex justify-between items-center bg-[#0b0f14] z-10">
+        <div class="flex items-center gap-4">
+            <button onclick="window.location.href='setup.html'" class="text-gray-500 hover:text-white transition">✕
+                Exit</button>
+            <span class="text-sm font-medium text-gray-400">Progress: <span id="progress-text">1/10</span></span>
+        </div>
+
+        <!-- Streak Counter -->
+        <div id="streak-container"
+            class="hidden items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-500 font-bold text-xs transition-all">
+            🔥 <span id="streak-count">0</span>
+        </div>
+
+        <div class="flex gap-4">
+            <div
+                class="text-[#22c55e] px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-xs font-bold">
+                ✓ <span id="stat-correct">0</span>
+            </div>
+            <div class="text-red-500 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-bold">
+                ✕ <span id="stat-wrong">0</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="w-full h-1 bg-gray-800">
+        <div id="progress-bar" class="h-full bg-[#22c55e] transition-all duration-500" style="width: 10%"></div>
+    </div>
+
+    <main id="quiz-container" class="flex-1 flex flex-col items-center justify-center p-6">
+        <div class="text-center mb-12">
+            <p class="text-gray-500 uppercase tracking-widest text-xs mb-4">Identify the character</p>
+            <h1 id="question-char" class="text-9xl font-bold text-white">あ</h1>
+        </div>
+
+        <div id="options-grid" class="grid grid-cols-2 gap-4 w-full max-w-sm">
+            <button onclick="checkAnswer(true, this)"
+                class="bg-dark-card border border-gray-800 p-6 rounded-2xl text-2xl font-bold hover:border-[#22c55e] transition-all">a</button>
+            <button onclick="checkAnswer(false, this)"
+                class="bg-dark-card border border-gray-800 p-6 rounded-2xl text-2xl font-bold hover:border-[#22c55e] transition-all">ka</button>
+            <button onclick="checkAnswer(false, this)"
+                class="bg-dark-card border border-gray-800 p-6 rounded-2xl text-2xl font-bold hover:border-[#22c55e] transition-all">ki</button>
+            <button onclick="checkAnswer(false, this)"
+                class="bg-dark-card border border-gray-800 p-6 rounded-2xl text-2xl font-bold hover:border-[#22c55e] transition-all">o</button>
+        </div>
+    </main>
+
+    <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
+
+        <div id="modal-card"
+            class="relative bg-[#111826] border border-gray-800 w-full max-w-sm rounded-[32px] p-8 text-center modal-scale">
+            <div
+                class="w-20 h-20 bg-green-500/20 text-[#22c55e] rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+
+            <h2 class="text-3xl font-bold mb-2">Session End</h2>
+            <div class="grid grid-cols-2 gap-4 my-8">
+                <div class="bg-black/30 rounded-2xl p-4 border border-gray-800">
+                    <p class="text-gray-500 text-[10px] uppercase">Correct</p>
+                    <p class="text-2xl font-bold" id="final-score">0</p>
+                </div>
+                <div class="bg-black/30 rounded-2xl p-4 border border-gray-800">
+                    <p class="text-gray-500 text-[10px] uppercase">Accuracy</p>
+                    <p class="text-2xl font-bold text-[#22c55e]" id="final-accuracy">0%</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="location.reload()"
+                    class="w-full bg-[#22c55e] text-black font-bold p-4 rounded-xl hover:opacity-90 transition-all">Play
+                    Again</button>
+                <button onclick="window.location.href='setup.html'"
+                    class="w-full bg-transparent border border-gray-700 p-4 rounded-xl hover:bg-gray-800 transition-all">Exit
+                    to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const HIRAGANA_FULL = [
+            { k: 'あ', r: 'a' }, { k: 'い', r: 'i' }, { k: 'う', r: 'u' }, { k: 'え', r: 'e' }, { k: 'お', r: 'o' },
+            { k: 'か', r: 'ka' }, { k: 'き', r: 'ki' }, { k: 'く', r: 'ku' }, { k: 'け', r: 'ke' }, { k: 'こ', r: 'ko' },
+            { k: 'さ', r: 'sa' }, { k: 'し', r: 'shi' }, { k: 'す', r: 'su' }, { k: 'せ', r: 'se' }, { k: 'そ', r: 'so' }
+        ];
+
+        let quizQueue = [];
+        let currentQuestion = null;
+        let currentQuestionIndex = 0;
+        let correctCount = 0;
+        let wrongCount = 0;
+        let streak = 0;
+        const totalQuestions = 10;
+
+        const selectedChars = JSON.parse(localStorage.getItem('selected-kana')) || [];
+        const mode = localStorage.getItem('practice-mode') || 'k2r';
+
+        window.onload = initQuiz;
+
+        function initQuiz() {
+            // Filter data
+            const validData = HIRAGANA_FULL.filter(item => selectedChars.includes(item.k));
+
+            // Generate queue
+            if (validData.length === 0) {
+                alert("No characters selected!");
+                window.location.href = 'setup.html';
+                return;
+            }
+
+            // Fill queue to totalQuestions
+            quizQueue = [];
+            while (quizQueue.length < totalQuestions) {
+                const random = validData[Math.floor(Math.random() * validData.length)];
+                quizQueue.push(random);
+            }
+
+            updateStats();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            currentQuestion = quizQueue[currentQuestionIndex];
+            const questionEl = document.getElementById('question-char');
+            const optionsGrid = document.getElementById('options-grid');
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar');
+
+            // Reset UI
+            optionsGrid.innerHTML = '';
+            optionsGrid.style.pointerEvents = 'auto';
+            questionEl.classList.remove('text-[#22c55e]', 'text-red-500');
+
+            // Text to speech setup
+            questionEl.onclick = () => playAudio(currentQuestion.k);
+            questionEl.style.cursor = "pointer";
+            questionEl.title = "Click to listen";
+
+            // Display Logic based on mode
+            let displayQuestion, displayAnswerType;
+            if (mode === 'k2r') {
+                displayQuestion = currentQuestion.k;
+                displayAnswerType = 'r';
+            } else {
+                displayQuestion = currentQuestion.r;
+                displayAnswerType = 'k';
+            }
+
+            questionEl.innerText = displayQuestion;
+
+            // Progress Update
+            progressText.innerText = `${currentQuestionIndex + 1}/${totalQuestions}`;
+            progressBar.style.width = `${((currentQuestionIndex) / totalQuestions) * 100}%`;
+
+            // Generate Options
+            let options = [currentQuestion];
+            while (options.length < 4) {
+                let randomItem = HIRAGANA_FULL[Math.floor(Math.random() * HIRAGANA_FULL.length)];
+                if (!options.some(o => o.k === randomItem.k)) options.push(randomItem);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                const btnText = mode === 'k2r' ? opt.r : opt.k;
+
+                btn.className = "bg-dark-card border border-gray-800 p-6 rounded-2xl text-2xl font-bold hover:border-[#22c55e] transition-all";
+                btn.innerText = btnText;
+                btn.onclick = () => checkAnswer(opt.k === currentQuestion.k, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(isCorrect, btn) {
+            document.getElementById('options-grid').style.pointerEvents = 'none';
+
+            if (isCorrect) {
+                correctCount++;
+                streak++;
+                btn.classList.add('border-[#22c55e]', 'bg-[#22c55e]/20', 'text-[#22c55e]', 'animate-success');
+                playAudio(currentQuestion.k); // Auto play sound on correct
+                checkStreak();
+            } else {
+                wrongCount++;
+                streak = 0;
+                btn.classList.add('border-red-500', 'bg-red-500/20', 'text-red-500', 'animate-shake');
+                updateStreakUI();
+
+                // Highlight correct answer
+                const buttons = document.getElementById('options-grid').children;
+                for (let b of buttons) {
+                    const correctText = mode === 'k2r' ? currentQuestion.r : currentQuestion.k;
+                    if (b.innerText === correctText) {
+                        setTimeout(() => b.classList.add('border-[#22c55e]', 'text-[#22c55e]'), 200);
+                    }
+                }
+            }
+
+            updateStats();
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < totalQuestions) {
+                    loadQuestion();
+                } else {
+                    document.getElementById('progress-bar').style.width = '100%';
+                    showResult();
+                }
+            }, 1000);
+        }
+
+        function updateStats() {
+            document.getElementById('stat-correct').innerText = correctCount;
+            document.getElementById('stat-wrong').innerText = wrongCount;
+        }
+
+        function checkStreak() {
+            updateStreakUI();
+            if (streak >= 3) {
+                // Determine particle count based on streak
+                const particleCount = Math.min(streak * 20, 150);
+                confetti({
+                    particleCount: particleCount,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#22c55e', '#ffffff', '#f59e0b']
+                });
+            }
+        }
+
+        function updateStreakUI() {
+            const container = document.getElementById('streak-container');
+            const count = document.getElementById('streak-count');
+
+            count.innerText = streak;
+
+            if (streak > 1) {
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                if (streak >= 5) container.classList.add('streak-fire');
+            } else {
+                container.classList.add('hidden');
+                container.classList.remove('flex', 'streak-fire');
+            }
+        }
+
+        function playAudio(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ja-JP';
+                utterance.rate = 0.8;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function showResult() {
+            const modal = document.getElementById('result-modal');
+            const card = document.getElementById('modal-card');
+
+            document.getElementById('final-score').innerText = `${correctCount}/${totalQuestions}`;
+            document.getElementById('final-accuracy').innerText = `${Math.round((correctCount / totalQuestions) * 100)}%`;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => card.classList.add('modal-show'), 50);
+
+            if (correctCount === totalQuestions) {
+                confetti({
+                    particleCount: 300,
+                    spread: 100,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
